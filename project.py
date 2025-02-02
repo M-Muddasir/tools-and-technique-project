@@ -15,7 +15,8 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import plotly.express as px
 import plotly.graph_objects as go
-import os
+import sys
+from io import StringIO
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -47,7 +48,7 @@ if load_data_button:
 
         # Dataset Information
         st.write("### Dataset Information:")
-        buffer = io.StringIO()
+        buffer = StringIO()
         data.info(buf=buffer)
         st.text(buffer.getvalue())
 
