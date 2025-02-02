@@ -269,7 +269,8 @@ if load_data_button or st.session_state.data_loaded:
                 st.write("Reject Null Hypothesis (Means are different).")
             else:
                 st.write("Fail to Reject Null Hypothesis (Means are same).")
-st.write("## Machine Learning")
+                
+        st.write("## Machine Learning")
 
         # Select Target Column
         target_column = st.selectbox("Select the target column", st.session_state.encoded_data.columns)
