@@ -16,6 +16,7 @@ from sklearn.manifold import TSNE
 import plotly.express as px
 import plotly.graph_objects as go
 import sys
+import os
 from io import StringIO
 
 import warnings
