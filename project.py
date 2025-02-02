@@ -22,6 +22,10 @@ from io import StringIO
 import warnings
 warnings.filterwarnings("ignore")
 
+# Initialize session state
+if 'data_loaded' not in st.session_state:
+    st.session_state.data_loaded = False
+
 st.title("AI Impact on Software Development Industry and Job Transformation")
 
 # Define the path to the dataset in the 'data' folder
@@ -30,7 +34,9 @@ data_file_path = 'data/data.xlsx'
 # Load Data Button
 load_data_button = st.button("Load Data")
 
-if load_data_button:
+if load_data_button or st.session_state.data_loaded:
+    st.session_state.data_loaded = True  # Set the state to True after loading data
+
     if os.path.exists(data_file_path):
         # Load the dataset from the 'data' folder
         data = pd.read_excel(data_file_path)
@@ -49,7 +55,9 @@ if load_data_button:
 
         # Dataset Information
         st.write("### Dataset Information:")
-        st.write(data.info())
+        buffer = StringIO()
+        data.info(buf=buffer)
+        st.text(buffer.getvalue())
 
         # Check for Null Values
         st.write("### Null Values in the Dataset:")
@@ -72,9 +80,9 @@ if load_data_button:
             short_name_map = {
                 "Your age?": "Age",
                 "How familiar are you with AI technologies?": "AI_Familiarity",
-                "What is your current role in the software development industry?": "Current_Role",
-                "How many years of experience do you have in the software industry?": "Years_Exp",
-                "Have you used AI tools (e.g., GitHub Copilot, ChatGPT, AI-based code generation, or testing tools)?": "Used_AI_Tools",
+                "What is your current role in the software development industry?  ": "Current_Role",
+                "How many years of experience do you have in the software industry?  ": "Years_Exp",
+                "Have you used AI tools (e.g., GitHub Copilot, ChatGPT, AI-based code generation, or testing tools)?  ": "Used_AI_Tools",
                 "If yes, which tasks do you use AI tools for? (Select all that apply)": "AI_Tasks_Usage",
                 "How has the use of AI tools impacted your productivity?": "AI_Impact_Productivity",
                 "What are the main benefits you’ve experienced using AI tools? (Select all that apply)": "AI_Benefits",
@@ -89,6 +97,10 @@ if load_data_button:
             }
             return short_name_map.get(full_column_name, full_column_name[:10])
 
+        # Before Encoding Data
+        st.write("### Before Encoding Data:")
+        st.write(data.head())
+
         # Clean and preprocess the dataset
         data.columns = [generate_short_column_name(col) for col in data.columns]
         data["AI_Tasks_Usage"] = data["AI_Tasks_Usage"].str.split(';').str[0]
@@ -99,7 +111,8 @@ if load_data_button:
         data["New_Skills_Required"] = data["New_Skills_Required"].str.split(';').str[0]
         data["AI_Familiarity"] = data["AI_Familiarity"].str.split('(').str[0]
 
-        st.write("### After Cleaning and Encoding Data:")
+        # After Encoding Data
+        st.write("### After Encoding Data:")
         st.write(data.head())
 
         # Data Preprocessing
@@ -119,21 +132,45 @@ if load_data_button:
             return encoded_data, label_mappings
 
         # Encode the data
+        st.write("### Encoding Data:")
         encoded_data, label_mappings = preprocess_data(data)
+        st.write(encoded_data.head())
+
+        # Store encoded_data in session state
+        if 'encoded_data' not in st.session_state:
+            st.session_state.encoded_data = encoded_data
 
         # EDA: Visualizations
         st.write("## Advanced Exploratory Data Analysis")
 
         if st.checkbox("Show Dataset Shape"):
+            st.write("### Dataset Shape:")
             st.write(f"Number of Rows: {data.shape[0]}")
             st.write(f"Number of Columns: {data.shape[1]}")
 
+        if st.checkbox("Show Dataset Information"):
+            st.write("### Dataset Information:")
+            buffer = StringIO()
+            data.info(buf=buffer)
+            st.text(buffer.getvalue())
+
         if st.checkbox("Show Null Values in the Dataset"):
+            st.write("### Null Values in the Dataset:")
+            null_values = data.isnull().sum()
             st.write(null_values)
+
+        if st.checkbox("Show Duplicate Rows in the Dataset"):
+            st.write("### Duplicate Rows in the Dataset:")
+            duplicate_rows = data.duplicated().sum()
+            st.write(f"Number of Duplicate Rows: {duplicate_rows}")
+
+        if st.checkbox("Show Dataset Columns"):
+            st.write("### Dataset Columns:")
+            st.write(data.columns.tolist())
 
         # Correlation Matrix with Plotly
         if st.checkbox("Show interactive correlation matrix"):
-            corr_matrix = encoded_data.corr()
+            corr_matrix = st.session_state.encoded_data.corr()
             fig = go.Figure(data=go.Heatmap(
                 z=corr_matrix.values,
                 x=corr_matrix.columns,
@@ -145,19 +182,102 @@ if load_data_button:
 
         # Histograms with Plotly
         if st.checkbox("Show interactive histogram for numerical features"):
-            num_cols = encoded_data.select_dtypes(include=np.number).columns
+            num_cols = st.session_state.encoded_data.select_dtypes(include=np.number).columns
             for col in num_cols:
-                fig = px.histogram(encoded_data, x=col, nbins=30, title=f"Distribution of {col}")
+                fig = px.histogram(st.session_state.encoded_data, x=col, nbins=30, title=f"Distribution of {col}")
                 st.plotly_chart(fig)
 
-        # Train Machine Learning Model
+        # Count Plots for Categorical Features with Plotly
+        if st.checkbox("Show interactive count plots for categorical features"):
+            cat_cols = data.select_dtypes(include="object").columns
+            for col in cat_cols:
+                fig = px.bar(data[col].value_counts(), title=f"Count Plot of {col}")
+                st.plotly_chart(fig)
+
+        # Box Plots with Plotly
+        if st.checkbox("Show interactive box plots for numerical features"):
+            num_cols = st.session_state.encoded_data.select_dtypes(include=np.number).columns
+            for col in num_cols:
+                fig = px.box(st.session_state.encoded_data, y=col, title=f"Box Plot of {col}")
+                st.plotly_chart(fig)
+
+        # Violin Plots with Plotly
+        if st.checkbox("Show interactive violin plots for numerical features"):
+            num_cols = st.session_state.encoded_data.select_dtypes(include=np.number).columns
+            for col in num_cols:
+                fig = px.violin(st.session_state.encoded_data, y=col, box=True, points="all", title=f"Violin Plot of {col}")
+                st.plotly_chart(fig)
+
+        # Feature Importance (Random Forest)
+        target_column = st.selectbox("Select target column for feature importance", st.session_state.encoded_data.columns)
+        if st.button("Show feature importance"):
+            X = st.session_state.encoded_data.drop(columns=[target_column])
+            y = st.session_state.encoded_data[target_column]
+
+            model = RandomForestClassifier()
+            model.fit(X, y)
+
+            feature_importance = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
+
+            fig = px.bar(feature_importance, x=feature_importance.values, y=feature_importance.index, title="Feature Importance (Random Forest)")
+            st.plotly_chart(fig)
+
+        # PCA for Dimensionality Reduction
+        if st.checkbox("Show PCA for dimensionality reduction"):
+            pca = PCA(n_components=2)
+            pca_result = pca.fit_transform(st.session_state.encoded_data)
+            pca_df = pd.DataFrame(data=pca_result, columns=['PC1', 'PC2'])
+            fig = px.scatter(pca_df, x='PC1', y='PC2', title="PCA of Dataset")
+            st.plotly_chart(fig)
+
+        # t-SNE for Dimensionality Reduction
+        if st.checkbox("Show t-SNE for dimensionality reduction"):
+            tsne = TSNE(n_components=2, perplexity=30, n_iter=300)
+            tsne_result = tsne.fit_transform(st.session_state.encoded_data)
+            tsne_df = pd.DataFrame(data=tsne_result, columns=['TSNE1', 'TSNE2'])
+            fig = px.scatter(tsne_df, x='TSNE1', y='TSNE2', title="t-SNE of Dataset")
+            st.plotly_chart(fig)
+
+        # Hypothesis Testing (Fixed)
+        st.write("## Hypothesis Testing")
+
+        test_type = st.selectbox("Select Hypothesis Test", ["Chi-Square", "T-Test"])
+
+        if test_type == "Chi-Square":
+            col1 = st.selectbox("Select first categorical variable", st.session_state.encoded_data.columns)
+            col2 = st.selectbox("Select second categorical variable", st.session_state.encoded_data.columns)
+
+            contingency_table = pd.crosstab(st.session_state.encoded_data[col1], st.session_state.encoded_data[col2])
+            chi2, p_value, _, _ = stats.chi2_contingency(contingency_table)
+
+            st.write(f"Chi-Square Test Result:\nChi2 Value: {chi2}, P-Value: {p_value}")
+
+            if p_value < 0.05:
+                st.write("Reject Null Hypothesis (Variables are independent).")
+            else:
+                st.write("Fail to Reject Null Hypothesis (Variables are dependent).")
+        
+        elif test_type == "T-Test":
+            col1 = st.selectbox("Select numerical variable 1", st.session_state.encoded_data.columns)
+            col2 = st.selectbox("Select numerical variable 2", st.session_state.encoded_data.columns)
+
+            t_stat, p_value = stats.ttest_ind(st.session_state.encoded_data[col1], st.session_state.encoded_data[col2])
+
+            st.write(f"T-Test Result:\nT-Statistic: {t_stat}, P-Value: {p_value}")
+
+            if p_value < 0.05:
+                st.write("Reject Null Hypothesis (Means are different).")
+            else:
+                st.write("Fail to Reject Null Hypothesis (Means are same).")
+
+        # Machine Learning
         st.write("## Train Machine Learning Model")
 
-        target_column = st.selectbox("Select the target column", encoded_data.columns)
+        target_column = st.selectbox("Select the target column", st.session_state.encoded_data.columns)
 
         if st.button("Train Model"):
-            X = encoded_data.drop(columns=[target_column])
-            y = encoded_data[target_column]
+            X = st.session_state.encoded_data.drop(columns=[target_column])
+            y = st.session_state.encoded_data[target_column]
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
