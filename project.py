@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore")
 st.title("AI Impact on Software Development Industry and Job Transformation")
 
 # Define the path to the dataset in the 'data' folder
-data_file_path = 'data/your_data.xlsx'
+data_file_path = 'data/data.xlsx'
 
 # Load Data Button
 load_data_button = st.button("Load Data")
