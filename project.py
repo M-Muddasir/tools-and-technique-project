@@ -269,20 +269,23 @@ if load_data_button or st.session_state.data_loaded:
                 st.write("Reject Null Hypothesis (Means are different).")
             else:
                 st.write("Fail to Reject Null Hypothesis (Means are same).")
+st.write("## Machine Learning")
 
-        # Machine Learning
-        st.write("## Train Machine Learning Model")
-
+        # Select Target Column
         target_column = st.selectbox("Select the target column", st.session_state.encoded_data.columns)
 
-        if st.button("Train Model"):
+        # Select Model Type
+        model_type = st.selectbox("Select model type", ["Random Forest", "Logistic Regression", "Naive Bayes", "Decision Tree"])
+
+        # Train and Test Button
+        if st.button("Train and Test"):
             X = st.session_state.encoded_data.drop(columns=[target_column])
             y = st.session_state.encoded_data[target_column]
 
+            # Split the data
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            model_type = st.selectbox("Select model type", ["Random Forest", "Logistic Regression", "Naive Bayes", "Decision Tree"])
-
+            # Initialize the selected model
             if model_type == "Random Forest":
                 model = RandomForestClassifier()
             elif model_type == "Logistic Regression":
@@ -292,9 +295,13 @@ if load_data_button or st.session_state.data_loaded:
             else:
                 model = DecisionTreeClassifier()
 
+            # Train the model
             model.fit(X_train, y_train)
+
+            # Make predictions
             y_pred = model.predict(X_test)
 
+            # Display evaluation metrics
             st.write("### Model Evaluation:")
             st.write(f"Accuracy: {accuracy_score(y_test, y_pred)}")
             st.write(f"Precision: {precision_score(y_test, y_pred, average='weighted')}")
